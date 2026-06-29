@@ -1,175 +1,184 @@
-# Pothole Detection — Classical ML Segmentation
+# Pothole Detection - Classical Computer Vision Segmentation
 
-Aplikasi deteksi lubang jalan berbasis **machine learning klasik** (LightGBM / XGBoost / CatBoost ensemble) dengan antarmuka Streamlit. Model melakukan segmentasi per-piksel menggunakan 33 hand-crafted computer vision features tanpa deep learning.
+This project is a Streamlit application for pixel-wise pothole segmentation using classical machine learning. It combines hand-crafted computer vision features with LightGBM, XGBoost, and CatBoost models to detect pothole regions without using deep learning.
 
-> **BINUS University · Semester 4 · Computer Vision**
+Live application: [pothole-detection-cv.streamlit.app](https://pothole-detection-cv.streamlit.app/)
 
----
+## Overview
 
-## Demo
+The application takes a road image as input and produces:
 
-Upload foto jalan → aplikasi menghasilkan mask prediksi, overlay, dan heatmap probabilitas secara real-time.
+- A binary pothole segmentation mask
+- An overlay of the prediction on the original image
+- A probability heatmap
+- Optional evaluation metrics when a ground truth mask is uploaded
+- A downloadable predicted mask in PNG format
 
----
+The app supports two inference modes:
 
-## Fitur Utama
+| Mode | Description |
+| --- | --- |
+| Real-time | Uses the fast single model for lower latency. |
+| Accuracy | Uses the full model artifact intended for the best segmentation quality. |
 
-- Segmentasi lubang jalan per-piksel (*pixel-wise segmentation*)
-- Dua mode inferensi: **Real-time** (cepat, model tunggal) dan **Accuracy** (ensemble penuh)
-- 33-channel feature map per piksel: warna, tekstur, tepi, statistik lokal, konteks spasial
-- Road mask otomatis — membatasi prediksi hanya pada area jalan
-- Post-processing yang dapat dikonfigurasi: threshold, morphological operations, area filter
-- Evaluasi opsional dengan ground truth mask (IoU, Dice, Pixel Accuracy, dll.)
-- Download hasil mask prediksi sebagai `.png`
-- UI dark-mode kustom dengan Streamlit
+## Main Features
 
----
+- Pixel-wise pothole segmentation
+- Classical machine learning pipeline, not deep learning
+- 36 image features per pixel, including color, texture, gradients, local statistics, spatial priors, and scene context
+- Automatic road-region filtering through a road mask feature
+- Configurable post-processing: thresholding, morphological filtering, hole filling, area filtering, and maximum predicted-area control
+- Optional validation against a ground truth mask
+- Streamlit web interface with image upload and result preview
 
-## Teknologi
+## Technology Stack
 
-| Komponen           | Library / Teknik                                                             |
-| ------------------ | ---------------------------------------------------------------------------- |
-| Feature extraction | OpenCV, scikit-image (LBP, Gabor, CLAHE, Sobel, Blackhat, Laplacian)        |
-| Model              | LightGBM, XGBoost, CatBoost (soft-probability ensemble)                      |
-| Antarmuka          | Streamlit                                                                    |
-| Image processing   | Pillow, NumPy                                                                |
+| Component | Tools |
+| --- | --- |
+| Web application | Streamlit |
+| Image processing | OpenCV, Pillow, NumPy |
+| Feature extraction | OpenCV and scikit-image |
+| Machine learning | LightGBM, XGBoost, CatBoost, scikit-learn |
+| Model storage | Pickle artifacts and JSON configuration |
 
----
+## Dataset Notes
 
-## Dataset
+The model artifacts were prepared for pothole segmentation using:
 
-| Dataset         | Peran                                              |
-| --------------- | -------------------------------------------------- |
-| **ARA 7.0**     | Dataset utama — segmentasi lubang jalan            |
-| **RDD2022 India** | Hard negatives — piksel jalan tanpa lubang (≤ 700 gambar, ~630 k piksel) |
+| Dataset | Role |
+| --- | --- |
+| ARA 7.0 | Main pothole segmentation dataset |
+| RDD2022 India | Hard-negative road images without potholes |
 
----
+The additional hard negatives help reduce false positives on normal road surfaces.
 
-## Arsitektur Model
+## Model Pipeline
 
-### Feature Extraction (33 fitur per piksel)
+The inference pipeline follows this flow:
 
-| Grup Fitur         | Fitur                                                        |
-| ------------------ | ------------------------------------------------------------ |
-| Color RGB          | R, G, B                                                      |
-| Color HSV          | Hue, Saturation, Value                                       |
-| Color CIE L\*a\*b\*| L\*, a\*, b\*                                                |
-| Intensitas         | Grayscale, CLAHE-equalized, Illumination-normalized          |
-| Gradien & Tepi     | Sobel magnitude, Sobel angle, Laplacian abs                  |
-| Statistik Lokal    | Mean k=7, Std k=7, Mean k=15, Std k=15                       |
-| Tekstur            | LBP uniform, Blackhat k=15, Blackhat k=31, Blackhat k=61     |
-| Filter Gabor       | theta=0°, theta=45°, theta=90°, theta=135°                   |
-| Spatial Prior      | x-position, y-position, Bottom prior (y²), Center-x distance |
-| Konteks Adegan     | Road mask, Wet-like, Shadow-like, Dark edge, Specular-like   |
-
-### Ensemble
-
-```
-Feature vector (33d)
-     ├── LightGBM  ──┐
-     ├── XGBoost   ──┤── Weighted avg ──> Probability map ──> Post-processing ──> Mask
-     └── CatBoost  ──┘
+```text
+Input image
+  -> resize to working resolution
+  -> extract per-pixel feature map
+  -> predict pothole probability
+  -> apply road mask and post-processing
+  -> output segmentation mask, overlay, and heatmap
 ```
 
-- **Real-time mode** — model tunggal (LightGBM) untuk latensi sub-detik pada input 256 px
-- **Accuracy mode** — ensemble ketiga model untuk kualitas mask tertinggi
+The feature extractor uses the following feature groups:
 
-### Pipeline Inferensi
+| Feature group | Examples |
+| --- | --- |
+| RGB color | R, G, B |
+| HSV color | Hue, saturation, value |
+| LAB color | L, A, B channels |
+| Intensity | Grayscale, CLAHE, illumination-normalized intensity |
+| Edges and gradients | Sobel magnitude, Sobel angle, Laplacian |
+| Local statistics | Local mean and standard deviation |
+| Texture | LBP, blackhat transforms, Gabor filters |
+| Spatial priors | Normalized x/y position, bottom prior, center distance |
+| Scene context | Road mask, wet-like, shadow-like, dark-edge, specular-like indicators |
 
-```
-BGR input → Resize ke work_size² → 33-channel feature map → Road mask filter
-         → predict_proba (ensemble) → Threshold + post-processing → Segmentation mask
-```
+## Validation Metrics
 
----
+The following validation metrics are stored in `pothole_output/pothole_config.json` and `submission csv/validation_metrics.csv`.
 
-## Metrik Validasi
+| Metric | Value |
+| --- | ---: |
+| IoU Pothole | 0.320 |
+| IoU Background | 0.863 |
+| mIoU | 0.592 |
+| Dice | 0.451 |
+| Pixel Accuracy | 0.874 |
+| Precision | 0.452 |
+| Recall | 0.619 |
+| Macro F1 | 0.687 |
 
-Diukur pada dataset validasi ARA 7.0 dengan post-processing optimal:
+## Project Structure
 
-| Metrik            | Nilai  |
-| ----------------- | ------ |
-| **IoU Pothole**   | 0.320  |
-| **mIoU**          | 0.592  |
-| **Dice**          | 0.451  |
-| **Pixel Accuracy**| 0.874  |
-| Precision         | 0.452  |
-| Recall            | 0.619  |
-| Macro F1          | 0.687  |
-
----
-
-## Struktur Proyek
-
-```
+```text
 pothole_cv_new/
-├── app.py                       # Aplikasi Streamlit utama
-├── requirements.txt             # Dependensi Python
-├── pothole_output/              # Artifact model (otomatis dibaca)
-│   ├── pothole_config.json      # Konfigurasi model & post-processing default
-│   ├── pothole_model_fast.pkl   # Model real-time (LightGBM)
-│   ├── pothole_model_accuracy.pkl  # Model accuracy (ensemble)
-│   └── pothole_model.pkl        # Model fallback
-└── notebook/                    # Notebook eksperimen & training
-    └── pothole-cv-xgb-cat-lightgbm.ipynb
+|-- app.py
+|-- requirements.txt
+|-- README.md
+|-- feature info/
+|   |-- dataset_audit.csv
+|   `-- feature_importance_lgbm.csv
+|-- notebook/
+|   `-- pothole-cv-xgb-cat-lightgbm.ipynb
+|-- pothole_output/
+|   |-- README.md
+|   |-- pothole_config.json
+|   |-- pothole_model.pkl
+|   |-- pothole_model_accuracy.pkl
+|   |-- pothole_model_fast.pkl
+|   |-- train_items_30.pkl
+|   `-- val_items_accuracy.pkl
+`-- submission csv/
+    |-- README.md
+    |-- sample_model_comparison.csv
+    |-- submission.csv
+    |-- threshold_search.csv
+    |-- train_val_metrics.csv
+    `-- validation_metrics.csv
 ```
 
----
+## Installation
 
-## Instalasi
+Create and activate a Python environment, then install the dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Menjalankan Aplikasi
+## Running Locally
+
+Start the Streamlit application from the project root:
 
 ```bash
 streamlit run app.py
 ```
 
-Buka browser di `http://localhost:8501`.
+Then open:
 
----
+```text
+http://localhost:8501
+```
 
-## Cara Penggunaan
+The app automatically looks for model artifacts in the `pothole_output` folder.
 
-1. Jalankan aplikasi dengan perintah di atas
-2. Upload foto jalan (JPG, PNG, BMP, WebP, TIFF)
-3. Atur parameter di sidebar (mode, threshold, area filter, dll.) sesuai kebutuhan
-4. Klik **Run Detection**
-5. Lihat hasil: **Original**, **Predicted Mask**, **Overlay**, dan **Heatmap Probabilitas**
-6. *(Opsional)* Upload ground truth mask di Step 02 untuk melihat metrik evaluasi
-7. Download mask prediksi dengan tombol **Download predicted mask**
+## How to Use the Application
 
----
+1. Open the live app or run the project locally.
+2. Upload a road image in JPG, PNG, BMP, WebP, or TIFF format.
+3. Choose the inference mode from the sidebar.
+4. Adjust post-processing parameters if needed.
+5. Click `Run Detection`.
+6. Review the original image, predicted mask, overlay, and probability heatmap.
+7. Optionally upload a ground truth mask to calculate evaluation metrics.
+8. Download the predicted mask if needed.
 
-## Parameter Post-processing
+## Post-processing Parameters
 
-| Parameter                | Default | Keterangan                                                                  |
-| ------------------------ | ------- | --------------------------------------------------------------------------- |
-| Probability threshold    | 0.80    | Ambang batas klasifikasi piksel sebagai lubang                              |
-| Min component area       | 1200 px | Ukuran minimum komponen yang dianggap lubang                                |
-| Close kernel             | 3       | Ukuran kernel morphological closing (menutup celah kecil)                   |
-| Open kernel              | 3       | Ukuran kernel morphological opening (menghapus noise kecil)                 |
-| Fill holes               | true    | Mengisi lubang di dalam mask prediksi (flood-fill)                          |
-| Max predicted area ratio | 0.18    | Batas maksimum proporsi area yang dapat diprediksi sebagai lubang           |
-| Keep largest component   | false   | Hanya simpan komponen lubang terbesar                                       |
+| Parameter | Default | Purpose |
+| --- | ---: | --- |
+| Probability threshold | 0.80 | Minimum probability required for a pixel to be classified as pothole. |
+| Minimum component area | 1200 px | Removes small noisy connected components. |
+| Close kernel | 3 | Fills small gaps in predicted regions. |
+| Open kernel | 3 | Removes small isolated noise. |
+| Fill holes | true | Fills holes inside predicted pothole regions. |
+| Maximum predicted area ratio | 0.18 | Prevents over-labeling large image regions as potholes. |
+| Keep largest component | false | Optionally keeps only the largest connected component. |
 
-> Jika area prediksi melebihi `max_area_ratio`, threshold dinaikkan otomatis sebesar 0.04 hingga area dalam batas.
+If the predicted area exceeds the maximum allowed ratio, the application increases the threshold automatically until the prediction is within the configured limit.
 
----
+## Repository Notes
 
-## Metrik Evaluasi
+- `pothole_output/` contains model artifacts and configuration used by the Streamlit app.
+- `submission csv/` contains submission output, validation metrics, threshold-search results, and model comparison files.
+- `notebook/` contains the experiment and training notebook.
+- `feature info/` contains supporting feature and dataset analysis files.
 
-Jika ground truth mask tersedia, aplikasi menghitung:
+## Limitations
 
-| Metrik            | Keterangan                                              |
-| ----------------- | ------------------------------------------------------- |
-| **IoU Pothole**   | Intersection over Union untuk kelas lubang              |
-| **mIoU**          | Mean IoU (rata-rata kelas lubang dan background)        |
-| **Dice**          | Dice coefficient                                        |
-| **Pixel Accuracy**| Akurasi per piksel keseluruhan                          |
-| **Precision**     | Dari total prediksi positif, berapa yang benar          |
-| **Recall**        | Dari total lubang sebenarnya, berapa yang terdeteksi    |
-| **Macro F1**      | Rata-rata F1 untuk kedua kelas (pothole & background)   |
+This project uses classical computer vision and machine learning. It may be sensitive to lighting changes, unusual road textures, shadows, water reflections, and camera perspective. For best results, use clear road images where pothole boundaries are visible.
