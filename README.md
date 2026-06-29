@@ -16,10 +16,10 @@ The application takes a road image as input and produces:
 
 The app supports two inference modes:
 
-| Mode | Description |
-| --- | --- |
-| Real-time | Uses the fast single model for lower latency. |
-| Accuracy | Uses the full model artifact intended for the best segmentation quality. |
+| Mode      | Description                                                              |
+| --------- | ------------------------------------------------------------------------ |
+| Real-time | Uses the fast single model for lower latency.                            |
+| Accuracy  | Uses the full model artifact intended for the best segmentation quality. |
 
 ## Main Features
 
@@ -33,21 +33,21 @@ The app supports two inference modes:
 
 ## Technology Stack
 
-| Component | Tools |
-| --- | --- |
-| Web application | Streamlit |
-| Image processing | OpenCV, Pillow, NumPy |
-| Feature extraction | OpenCV and scikit-image |
-| Machine learning | LightGBM, XGBoost, CatBoost, scikit-learn |
-| Model storage | Pickle artifacts and JSON configuration |
+| Component          | Tools                                     |
+| ------------------ | ----------------------------------------- |
+| Web application    | Streamlit                                 |
+| Image processing   | OpenCV, Pillow, NumPy                     |
+| Feature extraction | OpenCV and scikit-image                   |
+| Machine learning   | LightGBM, XGBoost, CatBoost, scikit-learn |
+| Model storage      | Pickle artifacts and JSON configuration   |
 
 ## Dataset Notes
 
 The model artifacts were prepared for pothole segmentation using:
 
-| Dataset | Role |
-| --- | --- |
-| ARA 7.0 | Main pothole segmentation dataset |
+| Dataset                                                                                        | Role                                       |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| ARA 7.0                                                                                        | Main pothole segmentation dataset          |
 | RDD2022 India from [sekilab/RoadDamageDetector](https://github.com/sekilab/RoadDamageDetector) | Hard-negative road images without potholes |
 
 The additional hard negatives help reduce false positives on normal road surfaces.
@@ -67,61 +67,61 @@ Input image
 
 The feature extractor uses the following feature groups:
 
-| Feature group | Examples |
-| --- | --- |
-| RGB color | R, G, B |
-| HSV color | Hue, saturation, value |
-| LAB color | L, A, B channels |
-| Intensity | Grayscale, CLAHE, illumination-normalized intensity |
-| Edges and gradients | Sobel magnitude, Sobel angle, Laplacian |
-| Local statistics | Local mean and standard deviation |
-| Texture | LBP, blackhat transforms, Gabor filters |
-| Spatial priors | Normalized x/y position, bottom prior, center distance |
-| Scene context | Road mask, wet-like, shadow-like, dark-edge, specular-like indicators |
+| Feature group       | Examples                                                              |
+| ------------------- | --------------------------------------------------------------------- |
+| RGB color           | R, G, B                                                               |
+| HSV color           | Hue, saturation, value                                                |
+| LAB color           | L, A, B channels                                                      |
+| Intensity           | Grayscale, CLAHE, illumination-normalized intensity                   |
+| Edges and gradients | Sobel magnitude, Sobel angle, Laplacian                               |
+| Local statistics    | Local mean and standard deviation                                     |
+| Texture             | LBP, blackhat transforms, Gabor filters                               |
+| Spatial priors      | Normalized x/y position, bottom prior, center distance                |
+| Scene context       | Road mask, wet-like, shadow-like, dark-edge, specular-like indicators |
 
 ## Validation Metrics
 
 The following validation metrics are stored in `pothole_output/pothole_config.json` and `submission csv/validation_metrics.csv`.
 
-| Metric | Value |
-| --- | ---: |
-| IoU Pothole | 0.320 |
+| Metric         | Value |
+| -------------- | ----: |
+| IoU Pothole    | 0.320 |
 | IoU Background | 0.863 |
-| mIoU | 0.592 |
-| Dice | 0.451 |
+| mIoU           | 0.592 |
+| Dice           | 0.451 |
 | Pixel Accuracy | 0.874 |
-| Precision | 0.452 |
-| Recall | 0.619 |
-| Macro F1 | 0.687 |
+| Precision      | 0.452 |
+| Recall         | 0.619 |
+| Macro F1       | 0.687 |
 
 ## Project Structure
 
 ```text
 pothole_cv_new/
-|-- app.py
-|-- requirements.txt
-|-- README.md
-|-- feature info/
-|   |-- dataset_audit.csv
-|   |-- feature_importance_lgbm.csv
-|   `-- README.md
-|-- notebook/
-|   `-- pothole-cv-xgb-cat-lightgbm.ipynb
-|-- pothole_output/
-|   |-- README.md
-|   |-- pothole_config.json
-|   |-- pothole_model.pkl
-|   |-- pothole_model_accuracy.pkl
-|   |-- pothole_model_fast.pkl
-|   |-- train_items_30.pkl
-|   `-- val_items_accuracy.pkl
-`-- submission csv/
-    |-- README.md
-    |-- sample_model_comparison.csv
-    |-- submission.csv
-    |-- threshold_search.csv
-    |-- train_val_metrics.csv
-    `-- validation_metrics.csv
+├── app.py
+├── requirements.txt
+├── README.md
+├── feature info/
+|   ├── dataset_audit.csv
+|   ├── feature_importance_lgbm.csv
+|   └── README.md
+├── notebook/
+|   └── pothole-cv-xgb-cat-lightgbm.ipynb
+├── pothole_output/
+|   ├── README.md
+|   ├── pothole_config.json
+|   ├── pothole_model.pkl
+|   ├── pothole_model_accuracy.pkl
+|   ├── pothole_model_fast.pkl
+|   ├── train_items_30.pkl
+|   └── val_items_accuracy.pkl
+└── submission csv/
+    ├── README.md
+    ├── sample_model_comparison.csv
+    ├── submission.csv
+    ├── threshold_search.csv
+    ├── train_val_metrics.csv
+    └── validation_metrics.csv
 ```
 
 ## Installation
@@ -161,15 +161,15 @@ The app automatically looks for model artifacts in the `pothole_output` folder.
 
 ## Post-processing Parameters
 
-| Parameter | Default | Purpose |
-| --- | ---: | --- |
-| Probability threshold | 0.80 | Minimum probability required for a pixel to be classified as pothole. |
-| Minimum component area | 1200 px | Removes small noisy connected components. |
-| Close kernel | 3 | Fills small gaps in predicted regions. |
-| Open kernel | 3 | Removes small isolated noise. |
-| Fill holes | true | Fills holes inside predicted pothole regions. |
-| Maximum predicted area ratio | 0.18 | Prevents over-labeling large image regions as potholes. |
-| Keep largest component | false | Optionally keeps only the largest connected component. |
+| Parameter                    | Default | Purpose                                                               |
+| ---------------------------- | ------: | --------------------------------------------------------------------- |
+| Probability threshold        |    0.80 | Minimum probability required for a pixel to be classified as pothole. |
+| Minimum component area       | 1200 px | Removes small noisy connected components.                             |
+| Close kernel                 |       3 | Fills small gaps in predicted regions.                                |
+| Open kernel                  |       3 | Removes small isolated noise.                                         |
+| Fill holes                   |    true | Fills holes inside predicted pothole regions.                         |
+| Maximum predicted area ratio |    0.18 | Prevents over-labeling large image regions as potholes.               |
+| Keep largest component       |   false | Optionally keeps only the largest connected component.                |
 
 If the predicted area exceeds the maximum allowed ratio, the application increases the threshold automatically until the prediction is within the configured limit.
 
