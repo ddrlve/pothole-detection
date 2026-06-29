@@ -48,7 +48,7 @@ The model artifacts were prepared for pothole segmentation using:
 | Dataset | Role |
 | --- | --- |
 | ARA 7.0 | Main pothole segmentation dataset |
-| RDD2022 India | Hard-negative road images without potholes |
+| RDD2022 India from [sekilab/RoadDamageDetector](https://github.com/sekilab/RoadDamageDetector) | Hard-negative road images without potholes |
 
 The additional hard negatives help reduce false positives on normal road surfaces.
 
@@ -103,7 +103,8 @@ pothole_cv_new/
 |-- README.md
 |-- feature info/
 |   |-- dataset_audit.csv
-|   `-- feature_importance_lgbm.csv
+|   |-- feature_importance_lgbm.csv
+|   `-- README.md
 |-- notebook/
 |   `-- pothole-cv-xgb-cat-lightgbm.ipynb
 |-- pothole_output/
@@ -177,7 +178,7 @@ If the predicted area exceeds the maximum allowed ratio, the application increas
 - `pothole_output/` contains model artifacts and configuration used by the Streamlit app.
 - `submission csv/` contains submission output, validation metrics, threshold-search results, and model comparison files.
 - `notebook/` contains the experiment and training notebook.
-- `feature info/` contains supporting feature and dataset analysis files.
+- `feature info/` contains supporting feature-importance and dataset-audit files.
 
 ## Limitations
 
