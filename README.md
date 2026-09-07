@@ -52,7 +52,7 @@ The model artifacts were prepared for pothole segmentation using:
 
 The additional hard negatives help reduce false positives on normal road surfaces.
 
-## Model Pipeline
+## Model Pipelines
 
 The inference pipeline follows this flow:
 
